@@ -1,0 +1,9 @@
+[tt-rss]
+url = https://rss.domain.tld
+user = username
+password = password
+
+[yt]
+client_id = your_client_id
+client_secret = your_client_secret
+credentials_file = yt_oauth_credentials
