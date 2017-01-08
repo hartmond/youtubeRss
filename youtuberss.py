@@ -56,4 +56,17 @@ while yt_req is not None:
 
   yt_req = yt.subscriptions().list_next(yt_req, yt_data)
 
+#subscribe
+for t in lst_yt:
+  if t in lst_ttrss:
+    lst_ttrss.remove(t)
+  else:
+    ttrss.subscribe(t['url'], youtubeCatID)
+
+#unsubscribe
+for t in lst_ttrss:
+  for f in ttrssfeeds:
+    if t['url'] == f.feed_url:
+      ttrss.unsubscribe(f.id)
+      break
 
