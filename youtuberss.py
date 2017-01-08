@@ -44,11 +44,16 @@ for f in ttrssfeeds:
 yt_api_credentials = Storage(conf['yt']['credentials_file']).get()
 yt = build('youtube', 'v3', http=(yt_api_credentials.authorize(httplib2.Http())))
 
-#TODO lower page size and iterate through pages
-ytdata = yt.subscriptions().list(part='snippet', mine=True, maxResults=50).execute()
-
 lst_yt = []
 
-for i in ytdata['items']:
-  lst_yt.append({'title':i['snippet']['title'], 'url':('https://www.youtube.com/feeds/videos.xml?channel_id=' + i['snippet']['resourceId']['channelId'])})
+yt_req = yt.subscriptions().list(part='snippet', mine=True, maxResults=5)
+
+while yt_req is not None:
+  yt_data  = yt_req.execute()
+
+  for i in yt_data['items']:
+    lst_yt.append({'title':i['snippet']['title'], 'url':('https://www.youtube.com/feeds/videos.xml?channel_id=' + i['snippet']['resourceId']['channelId'])})
+
+  yt_req = yt.subscriptions().list_next(yt_req, yt_data)
+
 
