@@ -22,9 +22,21 @@ auth_code = input()
 
 credentials = flow.step2_exchange(auth_code)
 
-#save the credentials for the cronjob
+#check if refresh token was received
 
-storage = Storage(conf['yt']['credentials_file'])
-storage.put(credentials)
+if credentials.refresh_token is None:
 
-print('The OAuth credentials were saved.')
+  #inform user to rerun script
+  print('!!!!!!!!!!')
+  print('No refresh token received!')
+  print('Please go to the Settings of your personal Google-Account (not the Developer account) and remove your application from connected applications and rerun the script')
+  print('!!!!!!!!!!')
+
+else:
+
+  #save the credentials for the cronjob
+
+  storage = Storage(conf['yt']['credentials_file'])
+  storage.put(credentials)
+
+  print('The OAuth credentials were saved.')
