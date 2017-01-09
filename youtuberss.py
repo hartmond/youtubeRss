@@ -15,6 +15,11 @@ if not os.path.exists('youtuberss.conf'):
 conf = configparser.ConfigParser()
 conf.read('youtuberss.conf')
 
+#check if oauth credentials exists
+if not os.path.exists(conf['yt']['credentials_file']):
+  print('Error! No OAuth credentials found. Run setup.py first')
+  sys.exit()
+
 #fetch current Youtube Subscriptions from tt-rss
 
 ttrss = TTRClient(conf['tt-rss']['url'], conf['tt-rss']['user'], conf['tt-rss']['password'])
