@@ -1,6 +1,13 @@
+import os
+import sys
 import configparser
 from oauth2client.client import OAuth2WebServerFlow
 from oauth2client.file import Storage
+
+#check if config file exists
+if not os.path.exists('youtuberss.conf'):
+  print('Error! No conifg file found.')
+  sys.exit()
 
 #read config file
 conf = configparser.ConfigParser()

@@ -1,9 +1,15 @@
 import sys
+import os
 import configparser
 import httplib2
 from ttrss.client import TTRClient
 from apiclient.discovery import build
 from oauth2client.file import Storage
+
+#check if config file exists
+if not os.path.exists('youtuberss.conf'):
+  print('Error! No conifg file found.')
+  sys.exit()
 
 #read config file
 conf = configparser.ConfigParser()
