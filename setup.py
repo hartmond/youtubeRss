@@ -4,16 +4,18 @@ import configparser
 from oauth2client.client import OAuth2WebServerFlow
 from oauth2client.file import Storage
 
-#check if config file exists
-if not os.path.exists('youtuberss.conf'):
-  print('Error! No conifg file found.')
-  sys.exit()
+# check if config file exists
 
-#read config file
+if not os.path.exists('youtuberss.conf'):
+    print('Error! No conifg file found.')
+    sys.exit()
+
+# read config file
+
 conf = configparser.ConfigParser()
 conf.read('youtuberss.conf')
 
-#request access to account and receive credentials
+# request access to account and receive credentials
 
 flow = OAuth2WebServerFlow(client_id=conf['yt']['client_id'],
                            client_secret=conf['yt']['client_secret'],
@@ -29,21 +31,22 @@ auth_code = input()
 
 credentials = flow.step2_exchange(auth_code)
 
-#check if refresh token was received
+# check if refresh token was received
 
 if credentials.refresh_token is None:
 
-  #inform user to rerun script
-  print('!!!!!!!!!!')
-  print('No refresh token received!')
-  print('Please go to the Settings of your personal Google-Account (not the Developer account) and remove your application from connected applications and rerun the script')
-  print('!!!!!!!!!!')
+    # inform user to rerun script
+    print('!!!!!!!!!!')
+    print('No refresh token received!')
+    print('Please go to the Settings of your personal Google-Account (not the Developer account)'
+          + 'and remove your application from connected applications and rerun the script')
+    print('!!!!!!!!!!')
 
 else:
 
-  #save the credentials for the cronjob
+    # save the credentials for the cronjob
 
-  storage = Storage(conf['yt']['credentials_file'])
-  storage.put(credentials)
+    storage = Storage(conf['yt']['credentials_file'])
+    storage.put(credentials)
 
-  print('The OAuth credentials were saved.')
+    print('The OAuth credentials were saved.')
