@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# coding: utf-8
+
+"""
+connector for watching YouTube subscriptions in Tiny Tiny RSS
+uses the APIs of tt-rss and YouTube find new subscribed/unsubscribed
+channels and updated subscribed feeds accordingly
+"""
+
 import sys
 import os
 import configparser
@@ -6,83 +15,100 @@ from ttrss.client import TTRClient
 from apiclient.discovery import build
 from oauth2client.file import Storage
 
-# check if config file exists
 
-if not os.path.exists('youtuberss.conf'):
-    print('Error! No conifg file found.')
-    sys.exit()
+class TTRssClient:
+    """class to handle the tt-rss api"""
+    def __init__(self, url, user, password):
+        self.client = TTRClient(url, user, password)
 
-# read config file
+        self.client.login()
+        if not self.client.logged_in():
+            print("Error logging in on TTRSS")
+            sys.exit()
 
-conf = configparser.ConfigParser()
-conf.read('youtuberss.conf')
+        self.youtube_cat_id = None
+        for category in self.client.get_categories():
+            if category.title == 'YouTube':
+                self.youtube_cat_id = category.id
+                break
 
-# check if oauth credentials exists
+        if self.youtube_cat_id is None:
+            print('No YouTube Category')
+            print('Please create Category with name YouTube')
+            sys.exit()
 
-if not os.path.exists(conf['yt']['credentials_file']):
-    print('Error! No OAuth credentials found. Run setup.py first')
-    sys.exit()
+        self.id_lookup = None
 
-# fetch current Youtube Subscriptions from tt-rss
+    def get_feeds(self):
+        """read currently subscribed feed from tt-rss"""
+        raw_feeds = self.client.get_feeds(cat_id=self.youtube_cat_id)
+        self.id_lookup = dict((f.feed_url, f.id) for f in raw_feeds)
+        subscriptions = set()
+        for feed in raw_feeds:
+            subscriptions.add((feed.feed_url, feed.title))
+        return subscriptions
 
-ttrss = TTRClient(conf['tt-rss']['url'], conf['tt-rss']['user'],
-                  conf['tt-rss']['password'])
-ttrss.login()
+    def subscribe(self, feed):
+        """subscribe to feed in tt-rss"""
+        self.client.subscribe(feed[0], self.youtube_cat_id)
 
-if not ttrss.logged_in():
-    print("Error logging in on TTRSS")
-    sys.exit()
-
-categories = ttrss.get_categories()
-
-youtubeCatID = -1
-
-for category in categories:
-    if category.title == 'YouTube':
-        youtubeCatID = category.id
-        break
-
-if youtubeCatID == -1:
-    print('No YouTube Category')
-    print('Please create Category with name YouTube')
-    sys.exit()
-
-lst_ttrss = set()
-
-ttrssfeeds = ttrss.get_feeds(cat_id=youtubeCatID)
-
-for feed in ttrssfeeds:
-    lst_ttrss.add((feed.feed_url, feed.title))
+    def unsubscribe(self, feed):
+        """unsubscribe from feed in tt-rss"""
+        self.client.unsubscribe(self.id_lookup[feed[0]])
 
 
-# fetch current Youtube Subscriptions from YouTube-API
+class YTConnector:
+    """class to handle the youtube api"""
+    def __init__(self, credentials_file):
+        if not os.path.exists(credentials_file):
+            print('Error! No OAuth credentials found. Run setup.py first')
+            sys.exit()
+        yt_api_credentials = Storage(credentials_file).get()
+        authorize = yt_api_credentials.authorize(httplib2.Http())
+        self.client = build('youtube', 'v3',
+                            http=authorize)
 
-yt_api_credentials = Storage(conf['yt']['credentials_file']).get()
-yt = build('youtube', 'v3',
-           http=(yt_api_credentials.authorize(httplib2.Http())))
+    def get_subscriptions(self):
+        """read current subscriptions from youtube api"""
+        lst_yt = set()
 
-lst_yt = set()
+        yt_req = self.client.subscriptions().list(part='snippet', mine=True,
+                                                  maxResults=5)
+        while yt_req is not None:
+            yt_data = yt_req.execute()
+            base = 'https://www.youtube.com/feeds/videos.xml?channel_id='
 
-yt_req = yt.subscriptions().list(part='snippet', mine=True, maxResults=5)
+            for feed in yt_data['items']:
+                lst_yt.add((base + feed['snippet']['resourceId']['channelId'],
+                            feed['snippet']['title']))
 
-while yt_req is not None:
-    yt_data = yt_req.execute()
+            yt_req = self.client.subscriptions().list_next(yt_req, yt_data)
 
-    for feed in yt_data['items']:
-        lst_yt.add(('https://www.youtube.com/feeds/videos.xml?channel_id='
-                    + feed['snippet']['resourceId']['channelId'],
-                    feed['snippet']['title']))
+        return lst_yt
 
-    yt_req = yt.subscriptions().list_next(yt_req, yt_data)
 
-# subscribe
+if __name__ == '__main__':
+    # read config file
+    if not os.path.exists('youtuberss.conf'):
+        print('Error! No conifg file found.')
+        sys.exit()
+    CONF = configparser.ConfigParser()
+    CONF.read('youtuberss.conf')
 
-for feed in lst_yt.difference(lst_ttrss):
-    ttrss.subscribe(feed[0], youtubeCatID)
+    # initalize tt-rss connector
+    TTRSS_URL, TTRSS_USER, TTRSS_PW = CONF['tt-rss'].values()
+    TTRSS = TTRssClient(TTRSS_URL, TTRSS_USER, TTRSS_PW)
 
-# unsubscribe
-if lst_ttrss:
-    id_lookup = dict((f.feed_url, f.id) for f in ttrssfeeds)
+    # initalize yt connecot
+    OAUTH_FILE = CONF['yt']['credentials_file']
+    YT = YTConnector(OAUTH_FILE)
 
-for feed in lst_ttrss.difference(lst_yt):
-    ttrss.unsubscribe(id_lookup[feed[0]])
+    # read acutal state
+    FEEDS_TTRSS = TTRSS.get_feeds()
+    FEEDS_YT = YT.get_subscriptions()
+
+    # update feed subscriptions in tt-rss
+    for subscribe_feed in FEEDS_YT.difference(FEEDS_TTRSS):
+        TTRSS.subscribe(subscribe_feed)
+    for unsubscribe_feed in FEEDS_TTRSS.difference(FEEDS_YT):
+        TTRSS.unsubscribe(unsubscribe_feed)
