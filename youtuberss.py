@@ -25,7 +25,8 @@ if not os.path.exists(conf['yt']['credentials_file']):
 
 # fetch current Youtube Subscriptions from tt-rss
 
-ttrss = TTRClient(conf['tt-rss']['url'], conf['tt-rss']['user'], conf['tt-rss']['password'])
+ttrss = TTRClient(conf['tt-rss']['url'], conf['tt-rss']['user'],
+                  conf['tt-rss']['password'])
 ttrss.login()
 
 if not ttrss.logged_in():
@@ -46,44 +47,42 @@ if youtubeCatID == -1:
     print('Please create Category with name YouTube')
     sys.exit()
 
-lst_ttrss = []
+lst_ttrss = set()
 
 ttrssfeeds = ttrss.get_feeds(cat_id=youtubeCatID)
 
-for f in ttrssfeeds:
-    lst_ttrss.append({'title': str(f.title), 'url': f.feed_url})
+for feed in ttrssfeeds:
+    lst_ttrss.add((feed.feed_url, feed.title))
+
 
 # fetch current Youtube Subscriptions from YouTube-API
 
 yt_api_credentials = Storage(conf['yt']['credentials_file']).get()
-yt = build('youtube', 'v3', http=(yt_api_credentials.authorize(httplib2.Http())))
+yt = build('youtube', 'v3',
+           http=(yt_api_credentials.authorize(httplib2.Http())))
 
-lst_yt = []
+lst_yt = set()
 
 yt_req = yt.subscriptions().list(part='snippet', mine=True, maxResults=5)
 
 while yt_req is not None:
     yt_data = yt_req.execute()
 
-    for i in yt_data['items']:
-        lst_yt.append({'title': i['snippet']['title'],
-                       'url': ('https://www.youtube.com/feeds/videos.xml?channel_id='
-                               + i['snippet']['resourceId']['channelId'])})
+    for feed in yt_data['items']:
+        lst_yt.add(('https://www.youtube.com/feeds/videos.xml?channel_id='
+                    + feed['snippet']['resourceId']['channelId'],
+                    feed['snippet']['title']))
 
     yt_req = yt.subscriptions().list_next(yt_req, yt_data)
 
 # subscribe
 
-for t in lst_yt:
-    if t in lst_ttrss:
-        lst_ttrss.remove(t)
-    else:
-        ttrss.subscribe(t['url'], youtubeCatID)
+for feed in lst_yt.difference(lst_ttrss):
+    ttrss.subscribe(feed[0], youtubeCatID)
 
 # unsubscribe
+if lst_ttrss:
+    id_lookup = dict((f.feed_url, f.id) for f in ttrssfeeds)
 
-for t in lst_ttrss:
-    for f in ttrssfeeds:
-        if t['url'] == f.feed_url:
-            ttrss.unsubscribe(f.id)
-            break
+for feed in lst_ttrss.difference(lst_yt):
+    ttrss.unsubscribe(id_lookup[feed[0]])
