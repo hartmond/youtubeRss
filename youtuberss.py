@@ -23,7 +23,7 @@ class TTRssClient:
 
         self.client.login()
         if not self.client.logged_in():
-            print("Error logging in on TTRSS")
+            print("Error logging in on tt-rss")
             sys.exit()
 
         self.youtube_cat_id = None
@@ -87,28 +87,30 @@ class YTConnector:
         return lst_yt
 
 
-if __name__ == '__main__':
+def main():
     # read config file
     if not os.path.exists('youtuberss.conf'):
         print('Error! No conifg file found.')
         sys.exit()
-    CONF = configparser.ConfigParser()
-    CONF.read('youtuberss.conf')
+    conf = configparser.ConfigParser()
+    conf.read('youtuberss.conf')
 
-    # initalize tt-rss connector
-    TTRSS_URL, TTRSS_USER, TTRSS_PW = CONF['tt-rss'].values()
-    TTRSS = TTRssClient(TTRSS_URL, TTRSS_USER, TTRSS_PW)
+    # initialize tt-rss connector
+    ttrss_cli = TTRssClient(*conf['tt-rss'].values())
 
-    # initalize yt connecot
-    OAUTH_FILE = CONF['yt']['credentials_file']
-    YT = YTConnector(OAUTH_FILE)
+    # initialize yt connector
+    yt_cli = YTConnector(conf['yt']['credentials_file'])
 
-    # read acutal state
-    FEEDS_TTRSS = TTRSS.get_feeds()
-    FEEDS_YT = YT.get_subscriptions()
+    # read actual state
+    feeds_ttrss = ttrss_cli.get_feeds()
+    feeds_yt = yt_cli.get_subscriptions()
 
     # update feed subscriptions in tt-rss
-    for subscribe_feed in FEEDS_YT.difference(FEEDS_TTRSS):
-        TTRSS.subscribe(subscribe_feed)
-    for unsubscribe_feed in FEEDS_TTRSS.difference(FEEDS_YT):
-        TTRSS.unsubscribe(unsubscribe_feed)
+    for subscribe_feed in feeds_yt.difference(feeds_ttrss):
+        ttrss_cli.subscribe(subscribe_feed)
+    for unsubscribe_feed in feeds_ttrss.difference(feeds_yt):
+        ttrss_cli.unsubscribe(unsubscribe_feed)
+
+
+if __name__ == '__main__':
+    main()
