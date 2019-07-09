@@ -1,0 +1,9 @@
+version: '3'
+services:
+  server:
+    image: "othrys/youtuberss"
+    restart: always
+    networks:
+      - default
+    volumes:
+      - ./youtuberss:/root/conf

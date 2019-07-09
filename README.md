@@ -8,3 +8,5 @@ Because of that I access my subscriptions through my Feed-Reader. I use Tiny Tin
 
 Fortunately, YouTube provides RSS feeds for channels. But I do not want to search an address and add this manually to tt-rss when I subscribe to a new channel. I use the subscribe buttons from YouTube. This script updates the subscriptions in tt-rss.
 
+## Usage with docker
+Place the config file in the mounted volume and refence a youtube-credentials file in the relative folder conf/.

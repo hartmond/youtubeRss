@@ -4,16 +4,18 @@ import configparser
 from oauth2client.client import OAuth2WebServerFlow
 from oauth2client.file import Storage
 
+conf_file = "conf/youtuberss.conf"
+
 # check if config file exists
 
-if not os.path.exists('youtuberss.conf'):
+if not os.path.exists(conf_file):
     print('Error! No conifg file found.')
     sys.exit()
 
 # read config file
 
 conf = configparser.ConfigParser()
-conf.read('youtuberss.conf')
+conf.read(conf_file)
 
 # request access to account and receive credentials
 

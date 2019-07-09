@@ -88,12 +88,15 @@ class YTConnector:
 
 
 def main():
+
+    conf_file = "conf/youtuberss.conf"
+
     # read config file
-    if not os.path.exists('youtuberss.conf'):
+    if not os.path.exists(conf_file):
         print('Error! No conifg file found.')
         sys.exit()
     conf = configparser.ConfigParser()
-    conf.read('youtuberss.conf')
+    conf.read(conf_file)
 
     # initialize tt-rss connector
     ttrss_cli = TTRssClient(*conf['tt-rss'].values())
