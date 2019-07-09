@@ -95,6 +95,7 @@ def main():
     if not os.path.exists(conf_file):
         print('Error! No conifg file found.')
         sys.exit()
+    print('Starting youtubeRss.py')
     conf = configparser.ConfigParser()
     conf.read(conf_file)
 
