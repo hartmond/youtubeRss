@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
 	"golang.org/x/net/context"
@@ -13,30 +12,11 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
-func youtubeTest() {
-	service, err := getYoutubeClient()
-	if err != nil {
-		log.Fatalf("Error creating YouTube client: %v", err)
-	}
-
-	for pageToken := ""; ; {
-		res, err := service.Subscriptions.List("snippet").Mine(true).MaxResults(10).PageToken(pageToken).Do()
-		if err != nil {
-			log.Fatalf("Error Listing YouTube Subscriptions: %v", err)
-		}
-
-		for _, elem := range res.Items {
-			fmt.Println(elem.Snippet.ResourceId.ChannelId, elem.Snippet.Title)
-		}
-
-		pageToken = res.NextPageToken
-		if pageToken == "" {
-			break
-		}
-	}
+type YoutubeClient struct {
+	client *youtube.Service
 }
 
-func getYoutubeClient() (*youtube.Service, error) {
+func NewYoutubeClient() (*YoutubeClient, error) {
 	scope := youtube.YoutubeReadonlyScope
 	ctx := context.Background()
 
@@ -62,6 +42,30 @@ func getYoutubeClient() (*youtube.Service, error) {
 	}
 
 	httpClient := config.Client(ctx, token)
+	youtubeClient, err := youtube.New(httpClient)
+	if err != nil {
+		return nil, err
+	}
+	return &YoutubeClient{youtubeClient}, nil
+}
 
-	return youtube.New(httpClient)
+func (client *YoutubeClient) GetSubscriptions() ([]string, error) {
+	results := []string{}
+
+	for pageToken := ""; ; {
+		res, err := client.client.Subscriptions.List("snippet").Mine(true).MaxResults(10).PageToken(pageToken).Do()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, elem := range res.Items {
+			//fmt.Println(elem.Snippet.ResourceId.ChannelId, elem.Snippet.Title)
+			results = append(results, fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?channel_id=%s", elem.Snippet.ResourceId.ChannelId))
+		}
+
+		pageToken = res.NextPageToken
+		if pageToken == "" {
+			return results, nil
+		}
+	}
 }
