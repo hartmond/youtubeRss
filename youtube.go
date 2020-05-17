@@ -12,10 +12,12 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
+// YoutubeClient wraps the YouTube API client for simplified use
 type YoutubeClient struct {
 	client *youtube.Service
 }
 
+// NewYoutubeClient initializes a YouTube API client with configurations from json files
 func NewYoutubeClient(youtubeSecretFile, youtubeUserSecretFile string) (*YoutubeClient, error) {
 	scope := youtube.YoutubeReadonlyScope
 	ctx := context.Background()
@@ -91,6 +93,7 @@ func setupOauth(config *oauth2.Config, youtubeUserSecretFile string) (*oauth2.To
 	return token, nil
 }
 
+// GetSubscriptions returns a list of the FeedURLs of all currently subscribed YouTube channels
 func (client *YoutubeClient) GetSubscriptions() ([]string, error) {
 	results := []string{}
 
@@ -101,7 +104,6 @@ func (client *YoutubeClient) GetSubscriptions() ([]string, error) {
 		}
 
 		for _, elem := range res.Items {
-			//fmt.Println(elem.Snippet.ResourceId.ChannelId, elem.Snippet.Title)
 			results = append(results, fmt.Sprintf("https://www.youtube.com/feeds/videos.xml?channel_id=%s", elem.Snippet.ResourceId.ChannelId))
 		}
 

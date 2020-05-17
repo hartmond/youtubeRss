@@ -13,20 +13,21 @@ const (
 
 func main() {
 	fmt.Println("starting...")
+
 	minifluxClient, err := NewMinifluxClient(minifluxSecretFile)
 	if err != nil {
 		panic(err)
 	}
-	minifluxSubscriptions, err := minifluxClient.GetYoutubeSubscriptions()
-	if err != nil {
-		panic(err)
-	}
-	//fmt.Println(minifluxSubscriptions)
-
 	youtubeClient, err := NewYoutubeClient(youtubeSecretFile, youtubeUserSecretFile)
 	if err != nil {
 		panic(err)
 	}
+
+	minifluxSubscriptions, err := minifluxClient.GetYoutubeSubscriptions()
+	if err != nil {
+		panic(err)
+	}
+	
 	youtubeSubcriptions, err := youtubeClient.GetSubscriptions()
 	if err != nil {
 		panic(err)

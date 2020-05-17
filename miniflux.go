@@ -1,24 +1,26 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"io/ioutil"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
 
 	miniflux "miniflux.app/client"
 )
 
 type minifluxConfig struct {
-	Url string
+	URL   string
 	Token string
 }
 
+// MinifluxClient contains the actual miniflux client and a reference to the YouTube category
 type MinifluxClient struct {
 	client          *miniflux.Client
 	youtubeCategory *miniflux.Category
 }
 
+// NewMinifluxClient initializes a new client struct with config data from a json file
 func NewMinifluxClient(minifluxSecretFile string) (*MinifluxClient, error) {
 	// parse config
 	minifluxSecretFileHandle, err := os.Open(minifluxSecretFile)
@@ -32,12 +34,12 @@ func NewMinifluxClient(minifluxSecretFile string) (*MinifluxClient, error) {
 	}
 	var config minifluxConfig
 	err = json.Unmarshal(configFileBytes, &config)
-	if err != nil || config.Url == "" || config.Token == "" {
+	if err != nil || config.URL == "" || config.Token == "" {
 		return nil, fmt.Errorf("Miniflux Config file could not been understood")
 	}
-	
+
 	// create client
-	client := &MinifluxClient{miniflux.New(config.Url, config.Token), nil}
+	client := &MinifluxClient{miniflux.New(config.URL, config.Token), nil}
 
 	// find youtube Category
 	categories, err := client.client.Categories()
@@ -49,7 +51,7 @@ func NewMinifluxClient(minifluxSecretFile string) (*MinifluxClient, error) {
 			client.youtubeCategory = category
 			break
 		}
-	} 
+	}
 	if client.youtubeCategory == nil {
 		category, err := client.client.CreateCategory("YouTube")
 		if err != nil {
@@ -61,6 +63,7 @@ func NewMinifluxClient(minifluxSecretFile string) (*MinifluxClient, error) {
 	return client, nil
 }
 
+// GetYoutubeSubscriptions return a list of all currents subscriptions in the YouTube category
 func (client *MinifluxClient) GetYoutubeSubscriptions() ([]miniflux.Feed, error) {
 	feeds, err := client.client.Feeds()
 	if err != nil {
@@ -78,14 +81,13 @@ func (client *MinifluxClient) GetYoutubeSubscriptions() ([]miniflux.Feed, error)
 	return results, nil
 }
 
+// Subscribe subscribes a new Feed
 func (client *MinifluxClient) Subscribe(feedURL string) error {
 	_, err := client.client.CreateFeed(feedURL, client.youtubeCategory.ID)
 	return err
 }
 
+// Unsubscribe removes a current subscription
 func (client *MinifluxClient) Unsubscribe(feed miniflux.Feed) error {
 	return client.client.DeleteFeed(feed.ID)
 }
-//Lib functions for subscribe and unsubscribe
-//func (c *Client) CreateFeed(url string, categoryID int64) (int64, error)
-//func (c *Client) DeleteFeed(feedID int64) error
