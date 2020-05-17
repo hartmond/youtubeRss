@@ -30,15 +30,12 @@ func NewYoutubeClient(youtubeSecretFile, youtubeUserSecretFile string) (*Youtube
 		return nil, fmt.Errorf("Unable to parse client secret file to config: %v", err)
 	}
 
-	f, err := os.Open(youtubeUserSecretFile)
-	if err != nil {
-		return nil, err
-	}
-	token := &oauth2.Token{}
-	err = json.NewDecoder(f).Decode(token)
-	defer f.Close()
-	if err != nil {
-		return nil, err
+	var token *oauth2.Token
+	if token, err = loadOauthToken(youtubeUserSecretFile); err != nil {
+		token, err = setupOauth(config, youtubeUserSecretFile)
+		if err != nil {
+			return nil, fmt.Errorf("Oauth setup failed: %v", err)
+		}
 	}
 
 	httpClient := config.Client(ctx, token)
@@ -48,6 +45,50 @@ func NewYoutubeClient(youtubeSecretFile, youtubeUserSecretFile string) (*Youtube
 	}
 
 	return &YoutubeClient{youtubeClient}, nil
+}
+
+func loadOauthToken(youtubeUserSecretFile string) (*oauth2.Token, error) {
+	f, err := os.Open(youtubeUserSecretFile)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	token := &oauth2.Token{}
+	err = json.NewDecoder(f).Decode(token)
+	return token, err
+}
+
+func setupOauth(config *oauth2.Config, youtubeUserSecretFile string) (*oauth2.Token, error) {
+	fmt.Println("Starting Oauth setup as user configuration is not available or invalid")
+
+	config.RedirectURL = "urn:ietf:wg:oauth:2.0:oob"
+	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+
+	var code string
+	fmt.Printf("Open the following link in your browser:\n\n%v\n\n", authURL)
+	fmt.Println("Enter the displayed token:")
+
+	if _, err := fmt.Scan(&code); err != nil {
+		return nil, fmt.Errorf("Unable to read authorization code %v", err)
+	}
+
+	fmt.Println(authURL)
+
+	token, err := config.Exchange(oauth2.NoContext, code)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to retrieve token %v", err)
+	}
+
+	fmt.Println("Saving token")
+	fmt.Printf("Saving credential file to: %s\n", youtubeUserSecretFile)
+	f, err := os.OpenFile(youtubeUserSecretFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to cache oauth token: %v", err)
+	}
+	defer f.Close()
+	json.NewEncoder(f).Encode(token)
+
+	return token, nil
 }
 
 func (client *YoutubeClient) GetSubscriptions() ([]string, error) {
