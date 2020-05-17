@@ -16,11 +16,11 @@ type YoutubeClient struct {
 	client *youtube.Service
 }
 
-func NewYoutubeClient() (*YoutubeClient, error) {
+func NewYoutubeClient(youtubeSecretFile, youtubeUserSecretFile string) (*YoutubeClient, error) {
 	scope := youtube.YoutubeReadonlyScope
 	ctx := context.Background()
 
-	b, err := ioutil.ReadFile("client_secret.json")
+	b, err := ioutil.ReadFile(youtubeSecretFile)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to read client secret file: %v", err)
 	}
@@ -30,7 +30,7 @@ func NewYoutubeClient() (*YoutubeClient, error) {
 		return nil, fmt.Errorf("Unable to parse client secret file to config: %v", err)
 	}
 
-	f, err := os.Open("youtube-go.json")
+	f, err := os.Open(youtubeUserSecretFile)
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +46,7 @@ func NewYoutubeClient() (*YoutubeClient, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &YoutubeClient{youtubeClient}, nil
 }
 
