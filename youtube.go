@@ -98,7 +98,7 @@ func (client *YoutubeClient) GetSubscriptions() ([]string, error) {
 	results := []string{}
 
 	for pageToken := ""; ; {
-		res, err := client.client.Subscriptions.List("snippet").Mine(true).MaxResults(10).PageToken(pageToken).Do()
+		res, err := client.client.Subscriptions.List("snippet").Mine(true).MaxResults(10).Order("alphabetical").PageToken(pageToken).Do()
 		if err != nil {
 			return nil, err
 		}

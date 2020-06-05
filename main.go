@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	miniflux "miniflux.app/client"
@@ -20,25 +20,25 @@ var (
 )
 
 func main() {
-	fmt.Println("loading configurations and initializing clients")
+	log.Println("loading configurations and initializing clients")
 
 	var err error
 	minifluxClient, err = NewMinifluxClient(minifluxSecretFile)
 	if err != nil {
-		fmt.Println("Error initializing Miniflux Client: %v", err)
+		log.Printf("Error initializing Miniflux Client: %v", err)
 		return
 	}
 	youtubeClient, err = NewYoutubeClient(youtubeSecretFile, youtubeUserSecretFile)
 	if err != nil {
-		fmt.Println("Error initializing YouTube Client: %v", err)
+		log.Printf("Error initializing YouTube Client: %v", err)
 		return
 	}
 
-	fmt.Println("staring main loop")
+	log.Println("staring main loop")
 	ticker := time.NewTicker(updateInterval)
 
 	for {
-		fmt.Println("starting update procedure")
+		log.Println("starting update procedure")
 		updateFeeds()
 
 		<-ticker.C // wait until next update
@@ -49,37 +49,37 @@ func updateFeeds() {
 	// get current subscriptions
 	minifluxSubscriptions, err := minifluxClient.GetYoutubeSubscriptions()
 	if err != nil {
-		fmt.Println("Error receiving current subscriptions from Miniflux: %v", err)
+		log.Printf("Error receiving current subscriptions from Miniflux: %v", err)
 		return
 	}
 
-	youtubeSubcriptions, err := youtubeClient.GetSubscriptions()
+	youtubeSubscriptions, err := youtubeClient.GetSubscriptions()
 	if err != nil {
-		fmt.Println("Error receiving current subscriptions from YouTube: %v", err)
+		log.Printf("Error receiving current subscriptions from YouTube: %v", err)
 		return
 	}
 
 	// find newly subscripbed channels
-	for _, elem := range youtubeSubcriptions {
+	for _, elem := range youtubeSubscriptions {
 		if !minifluxContains(elem, minifluxSubscriptions) {
 			err = minifluxClient.Subscribe(elem)
 			if err != nil {
-				fmt.Println("Error on subscribe of %v: %v", elem, err)
+				log.Printf("Error on subscribe of %v: %v", elem, err)
 				continue
 			}
-			fmt.Println("subscribed: ", elem)
+			log.Println("subscribed: ", elem)
 		}
 	}
 
 	// find unsubscribed channels
 	for _, elem := range minifluxSubscriptions {
-		if !youtubeContains(elem, youtubeSubcriptions) {
+		if !youtubeContains(elem, youtubeSubscriptions) {
 			err = minifluxClient.Unsubscribe(elem)
 			if err != nil {
-				fmt.Println("Error on subscribe of %v: %v", elem.FeedURL, err)
+				log.Printf("Error on unsubscribe of %v: %v", elem.FeedURL, err)
 				continue
 			}
-			fmt.Println("unsubscripbed: ", elem.FeedURL)
+			log.Println("unsubscripbed: ", elem.FeedURL)
 		}
 	}
 }
@@ -101,3 +101,4 @@ func youtubeContains(val miniflux.Feed, list []string) bool {
 	}
 	return false
 }
+
